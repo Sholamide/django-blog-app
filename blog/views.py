@@ -5,11 +5,10 @@ from django.urls import reverse
 from django.views.generic import ListView
 from .forms import EmailPostForm, CommentForm
 from django.core.mail import send_mail
+from taggit.models import Tag
 
 
 # Create your views here.
-
-
 class PostListView(ListView):
     queryset = Post.published.all()
     context_object_name = 'posts'
@@ -17,9 +16,16 @@ class PostListView(ListView):
     template_name = 'blog/post/list.html'
 
 
-def post_list(request):
+def post_list(request, tag_slug=None):
     object_list = Post.published.all()
-    #adding pagination for it 
+    tag = None
+
+    if tag_slug:
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        object_list = object_list.filter(tags__in=[tag])
+
+
+    #adding pagination
     paginator = Paginator(object_list, 3) #three posts per page
     page = request.GET.get('page')
     try:
@@ -30,7 +36,7 @@ def post_list(request):
     except EmptyPage:
         #If page is out of range deliver last page of results  
         posts = paginator.page(paginator.num_pages)      
-    return render(request,'blog/post/list.html',{'page': page, 'posts': posts})
+    return render(request,'blog/post/list.html',{'page': page, 'posts': posts, 'tag': tag})
 
 
 def post_detail(request, year, month, day, post):
